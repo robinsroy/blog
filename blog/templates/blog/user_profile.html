@@ -1,0 +1,80 @@
+{% extends 'blog/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ profile_user.username }}'s Profile - Mini Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <img src="https://via.placeholder.com/150" alt="Profile Picture" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                <h3 class="card-title">{{ profile_user.username }}</h3>
+                <p class="text-muted">Member since {{ profile_user.date_joined|date:"F Y" }}</p>
+                <div class="d-flex justify-content-center gap-3 mb-3">
+                    <div class="text-center">
+                        <h5>{{ posts.count }}</h5>
+                        <small class="text-muted">Posts</small>
+                    </div>
+                    <div class="text-center">
+                        <h5>{{ comments.count }}</h5>
+                        <small class="text-muted">Comments</small>
+                    </div>
+                </div>
+                {% if user == profile_user %}
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Edit Profile
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">Recent Posts</h4>
+            </div>
+            <div class="card-body">
+                {% for post in posts %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ post.get_absolute_url }}" class="text-decoration-none">{{ post.title }}</a>
+                        </h5>
+                        <p class="card-text text-muted">
+                            Posted on {{ post.created|date:"F d, Y" }}
+                        </p>
+                        <a href="{{ post.get_absolute_url }}" class="btn btn-sm btn-primary">Read More</a>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No posts yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">Recent Comments</h4>
+            </div>
+            <div class="card-body">
+                {% for comment in comments %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p class="card-text">{{ comment.content|truncatewords:30 }}</p>
+                        <p class="card-text text-muted">
+                            On <a href="{{ comment.post.get_absolute_url }}" class="text-decoration-none">{{ comment.post.title }}</a>
+                            <br>
+                            {{ comment.created|date:"F d, Y" }}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No comments yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

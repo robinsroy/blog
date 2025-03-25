@@ -1,0 +1,449 @@
+{% extends 'blog/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ post.title }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Article Card -->
+            <article class="card shadow-sm mb-4 fade-in">
+                {% if post.featured_image %}
+                <div class="position-relative">
+                    <img src="{{ post.featured_image.url }}" class="card-img-top post-featured-image" alt="{{ post.title }}">
+                    <div class="position-absolute top-0 end-0 p-3">
+                        <div class="reaction-container position-relative">
+                            <button class="btn btn-light rounded-circle p-2 shadow-sm" id="post-reaction-btn">
+                                <i class="fas fa-heart {% if user in post.likes.all %}text-danger{% endif %}" id="post-like-{{ post.id }}"></i>
+                                <span id="post-like-count-{{ post.id }}" class="ms-1">{{ post.like_count }}</span>
+                            </button>
+                            <!-- Reaction Tooltip -->
+                            <div class="reaction-tooltip">
+                                <button class="reaction-tooltip-btn" data-reaction="like" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-thumbs-up"></i>
+                                </button>
+                                <button class="reaction-tooltip-btn" data-reaction="love" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                                <button class="reaction-tooltip-btn" data-reaction="haha" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-laugh"></i>
+                                </button>
+                                <button class="reaction-tooltip-btn" data-reaction="wow" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-surprise"></i>
+                                </button>
+                                <button class="reaction-tooltip-btn" data-reaction="sad" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-sad-tear"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="card-body p-4">
+                    <h1 class="post-title mb-3">{{ post.title }}</h1>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="post-meta">
+                            <span class="me-3">
+                                <i class="fas fa-user-circle me-1 text-primary"></i>
+                                <a href="{% url 'blog:user_profile' post.author.username %}" class="text-decoration-none">
+                                    {{ post.author.username }}
+                                </a>
+                            </span>
+                            <span class="me-3">
+                                <i class="fas fa-calendar-alt me-1 text-primary"></i>
+                                {{ post.created|date:"F d, Y" }}
+                            </span>
+                            {% if post.category %}
+                            <a href="{% url 'blog:category_detail' post.category.slug %}" class="category-badge">
+                                <i class="fas fa-folder me-1"></i>{{ post.category.name }}
+                            </a>
+                            {% endif %}
+                        </div>
+                        
+                        {% if user == post.author or user.is_staff %}
+                        <div class="post-actions">
+                            <a href="{% url 'blog:post_edit' post.slug %}" class="btn btn-sm btn-outline-primary me-2">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <a href="{% url 'blog:post_delete' post.slug %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="post-content mb-4">
+                        {{ post.content|linebreaks }}
+                    </div>
+                    
+                    <!-- Reaction Buttons -->
+                    <div class="reaction-wrapper border-top pt-3">
+                        <p class="mb-2 fw-bold">How did this post make you feel?</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="reaction-btn {% if user in post.likes.all %}liked active{% endif %}" data-reaction="like" data-post-id="{{ post.id }}">
+                                <i class="fas fa-thumbs-up me-1"></i> Like
+                                <span id="post-like-count-display" class="ms-1">{{ post.like_count }}</span>
+                            </button>
+                            <button class="reaction-btn" data-reaction="love" data-post-id="{{ post.id }}">
+                                <i class="fas fa-heart me-1"></i> Love
+                                <span id="post-love-count" class="ms-1">0</span>
+                            </button>
+                            <button class="reaction-btn" data-reaction="haha" data-post-id="{{ post.id }}">
+                                <i class="fas fa-laugh me-1"></i> Haha
+                                <span id="post-haha-count" class="ms-1">0</span>
+                            </button>
+                            <button class="reaction-btn" data-reaction="wow" data-post-id="{{ post.id }}">
+                                <i class="fas fa-surprise me-1"></i> Wow
+                                <span id="post-wow-count" class="ms-1">0</span>
+                            </button>
+                            <button class="reaction-btn" data-reaction="sad" data-post-id="{{ post.id }}">
+                                <i class="fas fa-sad-tear me-1"></i> Sad
+                                <span id="post-sad-count" class="ms-1">0</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Comments Section -->
+            <div class="card shadow-sm mb-4 fade-in">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-comments text-primary me-2"></i>
+                            Comments <span class="badge bg-primary rounded-pill">{{ comments.count }}</span>
+                        </h4>
+                        {% if user.is_authenticated %}
+                        <button id="comment-toggle-btn" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add Comment
+                        </button>
+                        {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                    <form id="comment-form" method="post" class="mb-4" style="display: none;">
+                        {% csrf_token %}
+                        {{ comment_form|crispy }}
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="button" class="btn btn-outline-secondary me-2" id="cancel-comment">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Post Comment
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    <div class="comments-list">
+                        {% for comment in comments %}
+                        <div class="comment fade-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="comment-main">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-user-circle fa-2x text-primary me-2"></i>
+                                        <div>
+                                            <h5 class="comment-author mb-0">{{ comment.author.username }}</h5>
+                                            <p class="comment-date mb-0">{{ comment.created|date:"F d, Y h:i A" }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="comment-content">
+                                        {{ comment.content|linebreaks }}
+                                    </div>
+                                    
+                                    <!-- Comment Reactions -->
+                                    <div class="d-flex align-items-center mt-2">
+                                        <div class="reaction-container position-relative me-2">
+                                            <button class="reaction-btn {% if user in comment.likes.all %}liked active{% endif %}" data-reaction="like" data-comment-id="{{ comment.id }}">
+                                                <i class="fas fa-thumbs-up me-1"></i>
+                                                <span id="comment-like-count-{{ comment.id }}">{{ comment.like_count }}</span>
+                                            </button>
+                                            <!-- Reaction Tooltip -->
+                                            <div class="reaction-tooltip">
+                                                <button class="reaction-tooltip-btn" data-reaction="like" data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-thumbs-up"></i>
+                                                </button>
+                                                <button class="reaction-tooltip-btn" data-reaction="love" data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-heart"></i>
+                                                </button>
+                                                <button class="reaction-tooltip-btn" data-reaction="haha" data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-laugh"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button class="reaction-btn" data-reaction="reply" data-comment-id="{{ comment.id }}">
+                                            <i class="fas fa-reply me-1"></i> Reply
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {% if user == comment.author or user.is_staff %}
+                                <div class="comment-actions">
+                                    <a href="{% url 'blog:comment_delete' comment.id %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <p class="lead text-muted">No comments yet. Be the first to comment!</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if comments.count > 3 %}
+                    <div class="text-center mt-4">
+                        <button class="btn btn-outline-primary" id="load-more-comments">
+                            <i class="fas fa-sync me-2"></i>Load More Comments
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- About Author -->
+            <div class="card shadow-sm mb-4 fade-in">
+                <div class="card-body">
+                    <h4 class="sidebar-title">About the Author</h4>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-user-circle fa-3x text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-1">{{ post.author.username }}</h5>
+                            <p class="text-muted small mb-0">Member since {{ post.author.date_joined|date:"F Y" }}</p>
+                        </div>
+                    </div>
+                    <p class="mb-3 small">{{ post.author.username }} is a passionate writer who loves sharing insights on various topics.</p>
+                    <a href="{% url 'blog:user_profile' post.author.username %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-user me-2"></i>View Profile
+                    </a>
+                </div>
+            </div>
+
+            <!-- Related Posts -->
+            <div class="card shadow-sm mb-4 fade-in">
+                <div class="card-body">
+                    <h4 class="sidebar-title">Related Posts</h4>
+                    {% if post.category %}
+                    <div class="list-group list-group-flush">
+                        {% for related_post in post.category.posts.all|slice:":5" %}
+                            {% if related_post.id != post.id %}
+                            <a href="{% url 'blog:post_detail' related_post.slug %}" class="list-group-item list-group-item-action border-0 px-0">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ related_post.title }}</h6>
+                                    <small class="text-muted">{{ related_post.created|date:"M d" }}</small>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>{{ related_post.author.username }}
+                                </small>
+                            </a>
+                            {% endif %}
+                        {% empty %}
+                        <p class="text-muted">No related posts found.</p>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No related posts found.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Tags -->
+            <div class="card shadow-sm mb-4 fade-in">
+                <div class="card-body">
+                    <h4 class="sidebar-title">Popular Tags</h4>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a href="#" class="category-badge">Technology</a>
+                        <a href="#" class="category-badge">Travel</a>
+                        <a href="#" class="category-badge">Food</a>
+                        <a href="#" class="category-badge">Lifestyle</a>
+                        <a href="#" class="category-badge">Health</a>
+                        <a href="#" class="category-badge">Fitness</a>
+                        <a href="#" class="category-badge">Fashion</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Newsletter -->
+            <div class="card shadow-sm mb-4 fade-in">
+                <div class="card-body">
+                    <h4 class="sidebar-title">Subscribe</h4>
+                    <p class="text-muted mb-3">Get notified of new posts by email</p>
+                    <form>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" placeholder="Your email address">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Subscribe
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commentToggleBtn = document.getElementById('comment-toggle-btn');
+    const commentForm = document.getElementById('comment-form');
+    const cancelComment = document.getElementById('cancel-comment');
+    
+    if (commentToggleBtn && commentForm) {
+        commentToggleBtn.addEventListener('click', function() {
+            commentForm.style.display = 'block';
+            commentToggleBtn.style.display = 'none';
+        });
+        
+        if (cancelComment) {
+            cancelComment.addEventListener('click', function() {
+                commentForm.style.display = 'none';
+                commentToggleBtn.style.display = 'block';
+            });
+        }
+    }
+    
+    // Add event listeners for reaction buttons
+    document.querySelectorAll('.reaction-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const reactionType = this.dataset.reaction;
+            if (postId && reactionType) {
+                reactToPost(postId, reactionType);
+            }
+        });
+    });
+    
+    // Add event listeners for comment reaction buttons
+    document.querySelectorAll('.comment-reaction-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const reactionType = this.dataset.reaction;
+            if (commentId && reactionType) {
+                reactToComment(commentId, reactionType);
+            }
+        });
+    });
+    
+    // Initialize reactions count
+    const postId = document.querySelector('.reaction-btn')?.dataset.postId;
+    if (postId) {
+        updateReactionCounts(postId);
+    }
+});
+
+const isAuthenticated = {% if user.is_authenticated %}true{% else %}false{% endif %};
+const loginUrl = "{% url 'login' %}?next={{ request.path }}";
+const likePostUrl = "{% url 'blog:like_post' 0 %}";
+const likeCommentUrl = "{% url 'blog:like_comment' 0 %}";
+const postLikeCount = {{ post.like_count }};
+
+function reactToPost(postId, reactionType) {
+    if (!isAuthenticated) {
+        window.location.href = loginUrl;
+        return;
+    }
+
+    fetch(likePostUrl.replace('0', postId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reaction_type: reactionType })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateReactionCounts(postId);
+            
+            const reactionBtn = document.querySelector(`.reaction-btn[data-reaction="${reactionType}"]`);
+            if (reactionBtn) {
+                const icon = reactionBtn.querySelector('i');
+                icon.classList.add('fa-beat');
+                setTimeout(() => {
+                    icon.classList.remove('fa-beat');
+                }, 1000);
+                
+                document.querySelectorAll('.reaction-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                reactionBtn.classList.add('active');
+            }
+        }
+    });
+}
+
+function reactToComment(commentId, reactionType) {
+    if (!isAuthenticated) {
+        window.location.href = loginUrl;
+        return;
+    }
+
+    fetch(likeCommentUrl.replace('0', commentId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reaction_type: reactionType })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const likeButton = document.getElementById(`comment-like-${commentId}`);
+            const likeCount = document.getElementById(`comment-like-count-${commentId}`);
+            if (likeButton && likeCount) {
+                likeButton.closest('.reaction-btn').classList.toggle('active');
+                likeButton.closest('.reaction-btn').classList.toggle('liked');
+                likeCount.textContent = data.like_count;
+                
+                likeButton.classList.add('fa-beat');
+                setTimeout(() => {
+                    likeButton.classList.remove('fa-beat');
+                }, 1000);
+            }
+        }
+    });
+}
+
+function updateReactionCounts(postId) {
+    const likeCount = document.getElementById('post-like-count-display');
+    const loveCount = document.getElementById('post-love-count');
+    const hahaCount = document.getElementById('post-haha-count');
+    const wowCount = document.getElementById('post-wow-count');
+    const sadCount = document.getElementById('post-sad-count');
+    
+    if (likeCount) likeCount.textContent = postLikeCount;
+    if (loveCount) loveCount.textContent = Math.floor(Math.random() * 10);
+    if (hahaCount) hahaCount.textContent = Math.floor(Math.random() * 8);
+    if (wowCount) wowCount.textContent = Math.floor(Math.random() * 5);
+    if (sadCount) sadCount.textContent = Math.floor(Math.random() * 3);
+}
+
+function showReplyForm(commentId) {
+    alert('Reply functionality would be implemented here!');
+}
+</script>
+{% endblock %} 

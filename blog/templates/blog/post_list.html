@@ -1,0 +1,192 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}Blog Posts - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Blog Posts</h1>
+                {% if user.is_authenticated %}
+                <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create Post
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Search Form -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" name="q" class="form-control" placeholder="Search posts..." 
+                                       value="{{ request.GET.q }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="fas fa-folder"></i>
+                                </span>
+                                <select name="category" class="form-select">
+                                    <option value="">All Categories</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.slug }}" 
+                                            {% if request.GET.category == category.slug %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-2"></i>Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Posts List -->
+            {% for post in posts %}
+            <div class="card shadow-sm mb-4">
+                {% if post.featured_image %}
+                <img src="{{ post.featured_image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 300px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h2 class="card-title h4">
+                        <a href="{% url 'blog:post_detail' post.slug %}" class="text-decoration-none text-dark">
+                            {{ post.title }}
+                        </a>
+                    </h2>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted">
+                                <i class="fas fa-user me-1"></i>{{ post.author.username }}
+                            </span>
+                            <span class="text-muted ms-3">
+                                <i class="fas fa-calendar me-1"></i>{{ post.created|date:"F d, Y" }}
+                            </span>
+                        </div>
+                        {% if post.category %}
+                        <a href="{% url 'blog:category_detail' post.category.slug %}" class="badge bg-primary">
+                            {{ post.category.name }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <p class="card-text">{{ post.content|truncatewords:50 }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-outline-primary">
+                            Read More
+                        </a>
+                        <div class="text-muted">
+                            <i class="fas fa-comments me-1"></i>{{ post.comments.count }} comments
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h3>No posts found</h3>
+                    <p class="text-muted">Try adjusting your search or filter criteria.</p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Your First Post
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">Categories</h4>
+                    <div class="list-group list-group-flush">
+                        {% for category in categories %}
+                        <a href="{% url 'blog:category_detail' category.slug %}" 
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            {{ category.name }}
+                            <span class="badge bg-primary rounded-pill">{{ category.posts.count }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% if user.is_authenticated %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Quick Actions</h4>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create New Post
+                        </a>
+                        <a href="{% url 'blog:user_profile' user.username %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user me-2"></i>View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

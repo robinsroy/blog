@@ -1,0 +1,31 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}Delete Post - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">Delete Post</h2>
+                    <p class="text-center">Are you sure you want to delete the post "{{ post.title }}"?</p>
+                    <p class="text-center text-muted">This action cannot be undone.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Delete Post
+                            </button>
+                            <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
